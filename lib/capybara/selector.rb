@@ -65,18 +65,19 @@ end
 # @filter [Boolean] :disabled Match disabled field?
 # @filter [Boolean] :multiple Match fields that accept multiple values
 Capybara.add_selector(:field) do
-  xpath(:name, :placeholder, :type) do |locator, options|
+  xpath(:name, :placeholder) do |locator, options|
     xpath = XPath.descendant(:input, :textarea, :select)[~XPath.attr(:type).one_of('submit', 'image', 'hidden')]
-    if options[:type]
-      type=options[:type].to_s
-      if ['textarea', 'select'].include?(type)
-        xpath = XPath.descendant(type.to_sym)
-      else
-        xpath = xpath[XPath.attr(:type).equals(type)]
-      end
-    end
     xpath=locate_field(xpath, locator, options)
     xpath
+  end
+
+  expression_filter(:type) do |expr, type|
+    type = type.to_s
+    if ['textarea', 'select'].include?(type)
+      expr.axis(:self, type.to_sym)
+    else
+      expr[XPath.attr(:type).equals(type)]
+    end
   end
 
   filter_set(:_field) # checked/unchecked/disabled/multiple
@@ -87,7 +88,7 @@ Capybara.add_selector(:field) do
   end
   describe do |options|
     desc = String.new
-    (expression_filters - [:type]).each { |ef| desc << " with #{ef.to_s} #{options[ef]}" if options.has_key?(ef) }
+    (expression_filters.keys - [:type]).each { |ef| desc << " with #{ef.to_s} #{options[ef]}" if options.has_key?(ef) }
     desc << " of type #{options[:type].inspect}" if options[:type]
     desc << " with value #{options[:with].to_s.inspect}" if options.has_key?(:with)
     desc
@@ -186,7 +187,7 @@ Capybara.add_selector(:button) do
 
     res_xpath = input_btn_xpath + btn_xpath + image_btn_xpath
 
-    res_xpath = expression_filters.inject(res_xpath) { |memo, ef| memo[find_by_attr(ef, options[ef])] }
+    res_xpath = expression_filters.keys.inject(res_xpath) { |memo, ef| memo[find_by_attr(ef, options[ef])] }
 
     res_xpath
   end
@@ -196,7 +197,7 @@ Capybara.add_selector(:button) do
   describe do |options|
     desc = String.new
     desc << " that is disabled" if options[:disabled] == true
-    expression_filters.each { |ef| desc << " with #{ef.to_s} #{options[ef]}" if options.has_key?(ef) }
+    expression_filters.keys.each { |ef| desc << " with #{ef.to_s} #{options[ef]}" if options.has_key?(ef) }
     desc
   end
 end
@@ -244,7 +245,7 @@ Capybara.add_selector(:fillable_field) do
 
   describe do |options|
     desc = String.new
-    expression_filters.each { |ef| desc << " with #{ef.to_s} #{options[ef]}" if options.has_key?(ef) }
+    expression_filters.keys.each { |ef| desc << " with #{ef.to_s} #{options[ef]}" if options.has_key?(ef) }
     desc << " with value #{options[:with].to_s.inspect}" if options.has_key?(:with)
     desc
   end
@@ -277,7 +278,7 @@ Capybara.add_selector(:radio_button) do
   describe do |options|
     desc = String.new
     desc << " with value #{options[:option].inspect}" if options[:option]
-    expression_filters.each { |ef| desc << " with #{ef.to_s} #{options[ef]}" if options.has_key?(ef) }
+    expression_filters.keys.each { |ef| desc << " with #{ef.to_s} #{options[ef]}" if options.has_key?(ef) }
     desc
   end
 end
@@ -308,7 +309,7 @@ Capybara.add_selector(:checkbox) do
   describe do |options|
     desc = String.new
     desc << " with value #{options[:option].inspect}" if options[:option]
-    expression_filters.each { |ef| desc << " with #{ef.to_s} #{options[ef]}" if options.has_key?(ef) }
+    expression_filters.keys.each { |ef| desc << " with #{ef.to_s} #{options[ef]}" if options.has_key?(ef) }
     desc
   end
 end
@@ -362,7 +363,7 @@ Capybara.add_selector(:select) do
     desc << " with options #{options[:options].inspect}" if options[:options]
     desc << " with at least options #{options[:with_options].inspect}" if options[:with_options]
     desc << " with #{options[:selected].inspect} selected" if options[:selected]
-    expression_filters.each { |ef| desc << " with #{ef.to_s} #{options[ef]}" if options.has_key?(ef) }
+    expression_filters.keys.each { |ef| desc << " with #{ef.to_s} #{options[ef]}" if options.has_key?(ef) }
     desc
   end
 end
@@ -415,7 +416,7 @@ Capybara.add_selector(:file_field) do
 
   describe do |options|
     desc = String.new
-    expression_filters.each { |ef| desc << " with #{ef.to_s} #{options[ef]}" if options.has_key?(ef) }
+    expression_filters.keys.each { |ef| desc << " with #{ef.to_s} #{options[ef]}" if options.has_key?(ef) }
     desc
   end
 end
@@ -495,7 +496,7 @@ Capybara.add_selector(:frame) do
   xpath(:name) do |locator, options|
     xpath = XPath.descendant(:iframe) + XPath.descendant(:frame)
     xpath = xpath[XPath.attr(:id).equals(locator.to_s) | XPath.attr(:name).equals(locator)] unless locator.nil?
-    xpath = expression_filters.inject(xpath) { |memo, ef| memo[find_by_attr(ef, options[ef])] }
+    xpath = expression_filters.keys.inject(xpath) { |memo, ef| memo[find_by_attr(ef, options[ef])] }
     xpath
   end
 

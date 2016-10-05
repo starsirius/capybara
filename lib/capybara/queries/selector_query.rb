@@ -94,16 +94,17 @@ module Capybara
 
       def xpath(exact=nil)
         exact = self.exact? if exact.nil?
-        expr = if @expression.respond_to?(:to_xpath) and exact
-          @expression.to_xpath(:exact)
+        expr = apply_expression_filters(@expression)
+        expr = if expr.respond_to?(:to_xpath) and exact
+          expr.to_xpath(:exact)
         else
-          @expression.to_s
+          expr.to_s
         end
         filtered_xpath(expr)
       end
 
       def css
-        filtered_css(@expression)
+        filtered_css(apply_expression_filters(@expression))
       end
 
       # @api private
@@ -144,7 +145,7 @@ module Capybara
       end
 
       def custom_keys
-        @custom_keys ||= query_filters.keys + @selector.expression_filters
+        @custom_keys ||= query_filters.keys + @selector.expression_filters.keys
       end
 
       def assert_valid_keys
@@ -178,6 +179,18 @@ module Capybara
           end.join(", ")
         end
         expr
+      end
+
+      def apply_expression_filters(expr)
+        @selector.expression_filters.select{|_, ef| !ef.nil?}.inject(expr) do |memo, (name, ef)|
+          if options.has_key?(name)
+            ef.apply_filter(expr, options[name])
+          elsif ef.default?
+            ef.apply_filter(expr, ef.default)
+          else
+            expr
+          end
+        end
       end
 
       def warn_exact_usage
