@@ -108,6 +108,7 @@ module Capybara
       if @touched
         driver.reset!
         @touched = false
+        assert_no_selector :xpath, "/html/body/*"
       end
       @server.wait_for_pending_requests if @server
       raise_server_error!
